@@ -40,11 +40,12 @@ def generate_report() -> str:
     # Сырье
     lines.append("\n🏦 *Биржевые котировки:*")
     commodities = get_all_commodities()
-    commodity_names = {"gold": "Золото", "silver": "Серебро", "urals-oil": "Нефть Urals", "usd": "Доллар"}
-    for key, value in commodities.items():
+    commodity_names = {"usd": "Доллар", "brent": "Нефть Brent", "urals": "Нефть Urals", "gold": "Золото", "silver": "Серебро"}
+    for key in ["usd", "brent", "urals", "gold", "silver"]:
+        value = commodities.get(key)
         if value:
             unit = "₽" if key == "usd" else "$"
-            lines.append(f"  {commodity_names.get(key, key)}: {value} {unit}")
+            lines.append(f"  {commodity_names[key]}: {value} {unit}")
     
     # Погода
     lines.append(f"\n🌤 *Погода в Москве ({date_str}):*")

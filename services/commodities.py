@@ -70,9 +70,13 @@ def get_usd_rate() -> float:
 
 
 def get_all_commodities() -> dict:
-    """Получает цены на золото, серебро, нефть Urals и курс доллара."""
-    items = ["gold", "silver", "urals-oil"]
-    result = {item: get_commodity_price(item) for item in items}
-    result["usd"] = get_usd_rate()
+    """Получает цены на золото, серебро, нефть Brent/Urals и курс доллара."""
+    result = {
+        "usd": get_usd_rate(),
+        "brent": get_commodity_price("brent-crude-oil"),
+        "urals": get_commodity_price("urals-oil"),
+        "gold": get_commodity_price("gold"),
+        "silver": get_commodity_price("silver"),
+    }
     return result
 
