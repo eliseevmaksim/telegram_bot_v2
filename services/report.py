@@ -49,13 +49,14 @@ def generate_report() -> str:
     
     # Погода
     lines.append(f"\n🌤 *Погода в Москве ({date_str}):*")
-    weather_df = get_weather()
-    if weather_df is not None and not weather_df.empty:
-        temps = get_temperatures(weather_df, [9, 12, 15, 18, 21])
-        for hour, temp in temps.items():
-            if temp is not None:
-                lines.append(f"  {hour:02d}:00: {temp:+.1f}°C")
-    else:
+    weather_data = get_weather()
+    temps = get_temperatures(weather_data, [9, 12, 15, 18, 21])
+    has_weather = False
+    for hour, temp in temps.items():
+        if temp is not None:
+            lines.append(f"  {hour:02d}:00: {temp:+.1f}°C")
+            has_weather = True
+    if not has_weather:
         lines.append("  Данные недоступны")
     
     return "\n".join(lines)
