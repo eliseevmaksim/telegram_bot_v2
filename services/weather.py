@@ -1,45 +1,49 @@
-import requests
+from datetime import datetime, timedelta
+import meteostat as ms
+from meteostat import Point
+from meteostat import Hourly
+import pytz
 
 
-def get_weather() -> dict:
-    """Получает прогноз погоды для Москвы через Open-Meteo API."""
+def get_weather():
+    """Получает прогноз погоды для Москвы на сегодня."""
     
-    params = {
-        "latitude": 55.7558,
-        "longitude": 37.6173,
-        "hourly": "temperature_2m",
-        "timezone": "Europe/Moscow",
-        "forecast_days": 1
-    }
+    moscow_tz = pytz.timezone('Europe/Moscow')
+    now = datetime.now(moscow_tz)
+    start = datetime(now.year, now.month, now.day)
+    end = start + timedelta(days=1)
+
+    moscow = ms.Point(55.7558, 37.6173, 150)
     
     try:
-        response = requests.get(
-            "https://api.open-meteo.com/v1/forecast",
-            params=params,
-            timeout=10
-        )
-        data = response.json()
-        
-        times = data["hourly"]["time"]
-        temps = data["hourly"]["temperature_2m"]
-        
-        result = {}
-        for time_str, temp in zip(times, temps):
-            hour = int(time_str.split("T")[1].split(":")[0])
-            result[hour] = temp
-        
-        return result
+        data = Hourly(moscow, start, end)
+        df = data.fetch().reset_index()
+        return df
     except Exception as e:
         print(f"Ошибка получения погоды: {e}")
         return None
 
 
-def get_temperatures(weather_data, target_hours: list = None) -> dict:
-    """Возвращает температуру для указанных часов."""
+def get_temperatures(df, target_hours: list = None) -> dict:
+    """
+    Возвращает температуру для указанных часов.
+    
+    Args:
+        df: DataFrame с колонками 'time' и 'temp'
+        target_hours: список часов (по умолчанию [9, 12, 15, 18, 21])
+    
+    Returns:
+        dict: {hour: temperature}
+    """
     if target_hours is None:
         target_hours = [9, 12, 15, 18, 21]
     
-    if weather_data is None:
-        return {h: None for h in target_hours}
+    result = {}
+    for hour in target_hours:
+        try:
+            temp = df.loc[df['time'].dt.hour == hour, 'temp'].iloc[0]
+            result[hour] = temp
+        except (IndexError, KeyError):
+            result[hour] = None
     
-    return {h: weather_data.get(h) for h in target_hours}
+    return result
