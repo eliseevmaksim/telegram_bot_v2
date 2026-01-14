@@ -11,6 +11,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from config import BOT_TOKEN, REPORT_HOUR, REPORT_MINUTE
 from services import generate_report
+from services.news import get_news_summary
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ async def cmd_start(message: types.Message):
             "✅ Вы уже подписаны на ежедневные сводки.\n\n"
             f"📅 Рассылка в {REPORT_HOUR:02d}:{REPORT_MINUTE:02d} МСК\n"
             "/report — получить сводку сейчас\n"
+            "/news — новостная сводка\n"
             "/stop — отписаться"
         )
     else:
@@ -58,6 +60,7 @@ async def cmd_start(message: types.Message):
             "👋 Привет! Вы подписались на ежедневные сводки.\n\n"
             f"📅 Рассылка в {REPORT_HOUR:02d}:{REPORT_MINUTE:02d} МСК\n"
             "/report — получить сводку сейчас\n"
+            "/news — новостная сводка\n"
             "/stop — отписаться"
         )
         logger.info(f"Новый подписчик: {chat_id}")
@@ -88,6 +91,19 @@ async def cmd_report(message: types.Message):
     except Exception as e:
         logger.error(f"Ошибка генерации отчета: {e}")
         await message.answer("❌ Ошибка при получении данных")
+
+
+@dp.message(Command("news"))
+async def cmd_news(message: types.Message):
+    """Обработчик команды /news — получить новостную сводку."""
+    await message.answer("📰 Собираю новости...")
+    
+    try:
+        news = get_news_summary()
+        await message.answer(f"📰 *Новостная сводка:*\n\n{news}", parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Ошибка получения новостей: {e}")
+        await message.answer("❌ Ошибка при получении новостей")
 
 
 async def send_daily_report():

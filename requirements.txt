@@ -5,3 +5,5 @@ meteostat==1.6.8
 pytz==2023.3
 pandas==2.0.3
 python-dotenv==1.0.1
+beautifulsoup4==4.12.3
+openai==1.40.0
