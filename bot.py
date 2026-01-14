@@ -107,13 +107,21 @@ async def cmd_news(message: types.Message):
 
 
 async def send_daily_report():
-    """Отправляет ежедневный отчет всем подписчикам."""
+    """Отправляет ежедневный отчет с новостями всем подписчикам."""
     if not subscribers:
         logger.info("Нет подписчиков для рассылки")
         return
     
     try:
         report = generate_report()
+        
+        # Добавляем новости к ежедневному отчету
+        try:
+            news = get_news_summary()
+            report += f"\n\n📰 *Новости:*\n{news}"
+        except Exception as e:
+            logger.error(f"Ошибка получения новостей: {e}")
+        
         for chat_id in subscribers.copy():
             try:
                 await bot.send_message(chat_id, report, parse_mode="Markdown")

@@ -6,7 +6,6 @@ from .currency import get_currency
 from .crypto import get_bitcoin_rate, get_ethereum_rate
 from .weather import get_weather, get_temperatures
 from .commodities import get_all_commodities
-from .news import get_news_summary
 
 logger = logging.getLogger(__name__)
 
@@ -76,15 +75,6 @@ def generate_report() -> str:
             lines.append("  Данные недоступны")
     except Exception as e:
         logger.error(f"Ошибка в блоке погоды: {e}")
-        lines.append("  Данные недоступны")
-    
-    # Новости
-    try:
-        lines.append("\n📰 *Новости:*")
-        news = get_news_summary()
-        lines.append(news)
-    except Exception as e:
-        logger.error(f"Ошибка в блоке новостей: {e}")
         lines.append("  Данные недоступны")
     
     return "\n".join(lines)
