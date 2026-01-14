@@ -1,21 +1,15 @@
 import requests
 from bs4 import BeautifulSoup
 from openai import OpenAI
+import logging
 
 from config import DEEPSEEK_API_KEY
 
+logger = logging.getLogger(__name__)
+
 
 def parse_news(url: str = "https://t.me/s/rbc_news", limit: int = 10) -> list:
-    """
-    Парсит последние новости из Telegram канала.
-    
-    Args:
-        url: URL публичного канала
-        limit: количество последних новостей
-    
-    Returns:
-        list: список текстов новостей
-    """
+    """Парсит последние новости из Telegram канала."""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -29,44 +23,37 @@ def parse_news(url: str = "https://t.me/s/rbc_news", limit: int = 10) -> list:
         
         news_list = []
         for post in posts[-limit:]:
-            # Удаляем ненужные теги
             for tag in post.find_all(['br', 'tg-emoji', 'a', 'i', 'b']):
-                if tag.name in ['br']:
+                if tag.name == 'br':
                     tag.replace_with(' ')
-                elif tag.name in ['tg-emoji']:
+                elif tag.name == 'tg-emoji':
                     tag.decompose()
             
             text = post.get_text(strip=True)
-            # Очищаем от проблемных символов
             text = text.encode('utf-8', errors='ignore').decode('utf-8')
             if text and len(text) > 20:
                 news_list.append(text)
         
+        logger.info(f"Спарсено {len(news_list)} новостей")
         return news_list
     except Exception as e:
-        print(f"Ошибка парсинга новостей: {e}")
+        logger.error(f"Ошибка парсинга новостей: {e}")
         return []
 
 
 def summarize_news(news_list: list) -> str:
-    """
-    Суммаризирует новости через DeepSeek API.
-    
-    Args:
-        news_list: список текстов новостей
-    
-    Returns:
-        str: краткая сводка новостей
-    """
+    """Суммаризирует новости через DeepSeek API."""
     if not news_list:
         return "Новости недоступны"
     
     if not DEEPSEEK_API_KEY:
+        logger.error("DEEPSEEK_API_KEY не установлен")
         return "API ключ не настроен"
     
     news_text = "\n\n".join([f"{i+1}. {news}" for i, news in enumerate(news_list)])
-    # Убеждаемся что текст в UTF-8
     news_text = news_text.encode('utf-8', errors='ignore').decode('utf-8')
+    
+    logger.info(f"Отправляю {len(news_list)} новостей в DeepSeek")
     
     try:
         client = OpenAI(
@@ -89,9 +76,10 @@ def summarize_news(news_list: list) -> str:
             temperature=0.6
         )
         
+        logger.info("Сводка получена успешно")
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"Ошибка суммаризации: {e}")
+        logger.error(f"Ошибка DeepSeek API: {type(e).__name__}: {e}")
         return "Ошибка получения сводки новостей"
 
 
