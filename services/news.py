@@ -17,9 +17,13 @@ def parse_news(url: str = "https://t.me/s/rbc_news", limit: int = 10) -> list:
         list: список текстов новостей
     """
     try:
-        response = requests.get(url, timeout=15)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept-Charset': 'utf-8'
+        }
+        response = requests.get(url, headers=headers, timeout=15)
         response.encoding = 'utf-8'
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.content.decode('utf-8', errors='ignore'), 'html.parser')
         
         posts = soup.find_all('div', class_='tgme_widget_message_text js-message_text')
         
@@ -33,6 +37,8 @@ def parse_news(url: str = "https://t.me/s/rbc_news", limit: int = 10) -> list:
                     tag.decompose()
             
             text = post.get_text(strip=True)
+            # Очищаем от проблемных символов
+            text = text.encode('utf-8', errors='ignore').decode('utf-8')
             if text and len(text) > 20:
                 news_list.append(text)
         
@@ -59,6 +65,8 @@ def summarize_news(news_list: list) -> str:
         return "API ключ не настроен"
     
     news_text = "\n\n".join([f"{i+1}. {news}" for i, news in enumerate(news_list)])
+    # Убеждаемся что текст в UTF-8
+    news_text = news_text.encode('utf-8', errors='ignore').decode('utf-8')
     
     try:
         client = OpenAI(
@@ -78,7 +86,6 @@ def summarize_news(news_list: list) -> str:
                     "content": f"Сделай краткую сводку этих новостей:\n\n{news_text}"
                 }
             ],
-            #max_tokens=500,
             temperature=0.6
         )
         
@@ -92,4 +99,3 @@ def get_news_summary() -> str:
     """Получает и суммаризирует новости."""
     news = parse_news()
     return summarize_news(news)
-
