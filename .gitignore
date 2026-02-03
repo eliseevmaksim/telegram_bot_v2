@@ -6,6 +6,7 @@ __pycache__/
 
 # Data
 subscribers.json
+user_sources.json
 
 # IDE
 .idea/

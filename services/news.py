@@ -1,21 +1,18 @@
 import requests
 from bs4 import BeautifulSoup
 from openai import OpenAI
+import logging
 
 from config import DEEPSEEK_API_KEY
+from .user_sources import get_user_sources, get_channel_url, DEFAULT_SOURCES
+
+logger = logging.getLogger(__name__)
 
 
-def parse_news(url: str = "https://t.me/s/rbc_news", limit: int = 10) -> list:
-    """
-    Парсит последние новости из Telegram канала.
+def parse_single_channel(channel: str, limit: int = 5) -> list:
+    """Парсит новости из одного Telegram канала."""
+    url = get_channel_url(channel)
     
-    Args:
-        url: URL публичного канала
-        limit: количество последних новостей
-    
-    Returns:
-        list: список текстов новостей
-    """
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -29,44 +26,63 @@ def parse_news(url: str = "https://t.me/s/rbc_news", limit: int = 10) -> list:
         
         news_list = []
         for post in posts[-limit:]:
-            # Удаляем ненужные теги
             for tag in post.find_all(['br', 'tg-emoji', 'a', 'i', 'b']):
-                if tag.name in ['br']:
+                if tag.name == 'br':
                     tag.replace_with(' ')
-                elif tag.name in ['tg-emoji']:
+                elif tag.name == 'tg-emoji':
                     tag.decompose()
             
             text = post.get_text(strip=True)
-            # Очищаем от проблемных символов
             text = text.encode('utf-8', errors='ignore').decode('utf-8')
             if text and len(text) > 20:
-                news_list.append(text)
+                news_list.append({"channel": channel, "text": text})
         
         return news_list
     except Exception as e:
-        print(f"Ошибка парсинга новостей: {e}")
+        logger.error(f"Ошибка парсинга @{channel}: {e}")
         return []
 
 
-def summarize_news(news_list: list) -> str:
+def parse_news(channels: list = None, limit_per_channel: int = 5) -> list:
     """
-    Суммаризирует новости через DeepSeek API.
+    Парсит новости из нескольких Telegram каналов.
     
     Args:
-        news_list: список текстов новостей
+        channels: список названий каналов
+        limit_per_channel: количество новостей с каждого канала
     
     Returns:
-        str: краткая сводка новостей
+        list: список новостей
     """
+    if channels is None:
+        channels = DEFAULT_SOURCES
+    
+    all_news = []
+    for channel in channels:
+        news = parse_single_channel(channel, limit_per_channel)
+        all_news.extend(news)
+        logger.info(f"@{channel}: {len(news)} новостей")
+    
+    logger.info(f"Всего собрано {len(all_news)} новостей из {len(channels)} каналов")
+    return all_news
+
+
+def summarize_news(news_list: list) -> str:
+    """Суммаризирует новости через DeepSeek API."""
     if not news_list:
         return "Новости недоступны"
     
     if not DEEPSEEK_API_KEY:
         return "API ключ не настроен"
     
-    news_text = "\n\n".join([f"{i+1}. {news}" for i, news in enumerate(news_list)])
-    # Убеждаемся что текст в UTF-8
+    # Форматируем новости с указанием источника
+    news_text = "\n\n".join([
+        f"{i+1}. [{item['channel']}] {item['text']}" 
+        for i, item in enumerate(news_list)
+    ])
     news_text = news_text.encode('utf-8', errors='ignore').decode('utf-8')
+    
+    logger.info(f"Отправляю {len(news_list)} новостей в DeepSeek")
     
     try:
         client = OpenAI(
@@ -89,13 +105,24 @@ def summarize_news(news_list: list) -> str:
             temperature=0.6
         )
         
+        logger.info("Сводка получена успешно")
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"Ошибка суммаризации: {e}")
+        logger.error(f"Ошибка DeepSeek API: {e}")
         return "Ошибка получения сводки новостей"
 
 
-def get_news_summary() -> str:
-    """Получает и суммаризирует новости."""
-    news = parse_news()
+def get_news_summary(user_id: int = None) -> str:
+    """
+    Получает и суммаризирует новости для пользователя.
+    
+    Args:
+        user_id: ID пользователя для персональных источников
+    """
+    if user_id:
+        channels = get_user_sources(user_id)
+    else:
+        channels = DEFAULT_SOURCES
+    
+    news = parse_news(channels)
     return summarize_news(news)
