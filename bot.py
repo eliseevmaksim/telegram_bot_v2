@@ -125,12 +125,11 @@ async def cmd_sources(message: types.Message):
     sources_list = "\n".join([f"  • @{s}" for s in sources])
     
     await message.answer(
-        f"📋 *Ваши источники новостей:*\n{sources_list}\n\n"
-        f"*Команды:*\n"
-        f"/addsource `ссылка` — добавить канал\n"
+        f"📋 Ваши источники новостей:\n{sources_list}\n\n"
+        f"Команды:\n"
+        f"/addsource ссылка — добавить канал\n"
         f"/removesource — удалить канал\n"
-        f"/clearsources — сбросить к стандартным",
-        parse_mode="Markdown"
+        f"/clearsources — сбросить к стандартным"
     )
 
 
@@ -144,9 +143,8 @@ async def cmd_addsource(message: types.Message):
     if len(args) < 2:
         await message.answer(
             "❓ Укажите канал для добавления:\n"
-            "`/addsource https://t.me/s/channel`\n"
-            "или `/addsource @channel`",
-            parse_mode="Markdown"
+            "/addsource https://t.me/s/channel\n"
+            "или /addsource @channel"
         )
         return
     
